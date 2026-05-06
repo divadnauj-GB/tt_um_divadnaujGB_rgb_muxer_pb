@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-module tt_um_example (
+module tt_um_rgb_mixer (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -17,11 +17,40 @@ module tt_um_example (
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  assign uo_out[7:3]  = 0;  // Example: ou_out is the sum of ui_in and uio_in
   assign uio_out = 0;
   assign uio_oe  = 0;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire sync_rst_n;
+  reg  [1:0] rst_sync;
+
+  always@(posedge clk, negedge rst_n) begin
+		if (~rst_n) begin
+			rst_sync <= 2'b00;
+		end else begin
+			rst_sync[0] <= 1'b1;
+			rst_sync[1] <= rst_sync[0];
+		end
+	end
+	
+
+  assign sync_rst_n = rst_sync[1];
+
+
+  rgb_mixer #(
+.CLK_FREQ(50000000),
+.PWM_FREQ(10000),
+.DEBOUNCE_FREQ(100000)
+) rgb_mixer_1tile (
+.clk(clk),
+.rst_n(sync_rst_n),
+.inc(ui_in[0]),
+.dec(ui_in[1]),
+.led(ui_in[3:2]),
+.PWM0(uo_out[0]),
+.PWM1(uo_out[1]),
+.PWM2(uo_out[2]));
+  
 
 endmodule
